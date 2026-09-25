@@ -1,3 +1,8 @@
+![Status](https://img.shields.io/badge/status-EXPERIMENTAL-9C27B0?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-0.1.0-1565C0?style=for-the-badge)
+![Python](https://img.shields.io/badge/python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Databricks](https://img.shields.io/badge/platform-Databricks-EF3E42?style=for-the-badge&logo=databricks&logoColor=white)
+![Sandbox](https://img.shields.io/badge/environment-SANDBOX-607D8B?style=for-the-badge)
 
 ## Arquitectura
 

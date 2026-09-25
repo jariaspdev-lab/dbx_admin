@@ -39,41 +39,19 @@ dbx-admin/
 │       ├── __init__.py
 │       ├── cli.py
 │       │
-│       ├── config/
-│       │   ├── settings.py
-│       │   └── environments.py
-│       │
-│       ├── clients/
-│       │   └── databricks.py
-│       │
 │       ├── secrets/
 │       │   ├── service.py
 │       │   └── models.py
 │       │
-│       ├── jobs/
-│       │   └── service.py
-│       │
-│       ├── catalog/
-│       │   └── service.py
-│       │
-│       ├── volumes/
-│       │   └── service.py
-│       │
-│       ├── apps/
-│       │   └── service.py
-│       │
-│       └── permissions/
-│           └── service.py
+│       ├── decode/
+│           ├── service.py
+│           └── models.py
 │
 ├── tests/
-│   ├── test_secrets.py
-│   └── test_config.py
 │
 ├── examples/
-│   └── secrets.yaml
 │
 └── scripts/
-    └── dev.ps1
 ```
 
 ## Ejecucion
@@ -121,7 +99,7 @@ Commands:
 #### * Listar
 
 ```powershell
-dbx-admin secrets list --scope akv-secrets-scope-01
+dbx-admin secrets list --scope secrets-scope-01
 ```
 
 #### * Crear
@@ -133,26 +111,29 @@ dbx-admin secrets create --scope mi-scope --key oracle-user --value "usuario_ora
 #### * Validar
 
 ```powershell
-dbx-admin secrets validate --scope akv-secrets-scope-01 --key oracle-password
+dbx-admin secrets validate --scope secrets-scope-01 --key oracle-password
 ```
 
 #### * Consultar
 
 ```powershell
-dbx-admin secrets get --scope akv-secrets-scope-01 --key oracle-password
+dbx-admin secrets get --scope secrets-scope-01 --key oracle-password
 ```
 
 Una mejora que haría desde el principio
 
 Hay una cosa que cambiaría respecto a la estructura inicial: aprovecharía tu archivo:
 
+```text
 clients/
 └── databricks.py
+```
 
 para que cli.py no tenga que conocer cómo se autentica Databricks.
 
 Quedaría:
 
+```text
 cli.py
    │
    ▼
@@ -163,15 +144,16 @@ DatabricksClient
    │
    ▼
 Databricks SDK
+```
 
 Así posteriormente puedes hacer:
 
+```powershell
 dbx-admin --profile dev secrets list --scope ...
+```
 
 o:
 
+```powershell
 dbx-admin --profile prod secrets list --scope ...
-
-sin modificar SecretService.
-
-Ese sería el siguiente paso que yo haría antes de agregar Jobs, Unity Catalog, Apps, etc. Así establecemos una buena arquitectura base y después los demás módulos (jobs, catalog, volumes, apps) simplemente reutilizan el mismo cliente.
+```
