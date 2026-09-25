@@ -14,41 +14,19 @@ dbx-admin/
 │       ├── __init__.py
 │       ├── cli.py
 │       │
-│       ├── config/
-│       │   ├── settings.py
-│       │   └── environments.py
-│       │
-│       ├── clients/
-│       │   └── databricks.py
-│       │
 │       ├── secrets/
 │       │   ├── service.py
 │       │   └── models.py
 │       │
-│       ├── jobs/
-│       │   └── service.py
-│       │
-│       ├── catalog/
-│       │   └── service.py
-│       │
-│       ├── volumes/
-│       │   └── service.py
-│       │
-│       ├── apps/
-│       │   └── service.py
-│       │
-│       └── permissions/
-│           └── service.py
+│       ├── decode/
+│           ├── service.py
+│           └── models.py
 │
 ├── tests/
-│   ├── test_secrets.py
-│   └── test_config.py
 │
 ├── examples/
-│   └── secrets.yaml
 │
 └── scripts/
-    └── dev.ps1
 ```
 
 ## Ejecucion
