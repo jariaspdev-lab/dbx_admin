@@ -1,0 +1,177 @@
+Metadata-Version: 2.4
+Name: dbx-admin
+Version: 0.1.0
+Summary: Herramientas de administración para Databricks
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: annotated-types==0.8.0
+Requires-Dist: certifi==2026.7.22
+Requires-Dist: cffi==2.1.1
+Requires-Dist: charset-normalizer==3.5.1
+Requires-Dist: cryptography==50.0.1
+Requires-Dist: databricks-sdk==0.142.0
+Requires-Dist: google-auth==2.58.1
+Requires-Dist: idna==3.20
+Requires-Dist: protobuf==6.33.6
+Requires-Dist: pyasn1==0.6.4
+Requires-Dist: pyasn1_modules==0.4.2
+Requires-Dist: pycparser==3.0
+Requires-Dist: pydantic==2.13.5
+Requires-Dist: pydantic_core==2.46.5
+Requires-Dist: requests==2.34.2
+Requires-Dist: typing-inspection==0.4.4
+Requires-Dist: typing_extensions==4.16.0
+Requires-Dist: urllib3==2.8.0
+
+
+## Arquitectura
+
+``` text
+dbx-admin/
+│
+├── pyproject.toml
+├── README.md
+├── .gitignore
+│
+├── src/
+│   └── dbx_admin/
+│       │
+│       ├── __init__.py
+│       ├── cli.py
+│       │
+│       ├── config/
+│       │   ├── settings.py
+│       │   └── environments.py
+│       │
+│       ├── clients/
+│       │   └── databricks.py
+│       │
+│       ├── secrets/
+│       │   ├── service.py
+│       │   └── models.py
+│       │
+│       ├── jobs/
+│       │   └── service.py
+│       │
+│       ├── catalog/
+│       │   └── service.py
+│       │
+│       ├── volumes/
+│       │   └── service.py
+│       │
+│       ├── apps/
+│       │   └── service.py
+│       │
+│       └── permissions/
+│           └── service.py
+│
+├── tests/
+│   ├── test_secrets.py
+│   └── test_config.py
+│
+├── examples/
+│   └── secrets.yaml
+│
+└── scripts/
+    └── dev.ps1
+```
+
+## Ejecucion
+
+### 1 Instalacion aplicacion
+
+```powershell
+pip install -e .
+```
+
+### 2 Utilizar aplicacion
+
+```powershell
+dbx-admin --help
+```
+
+obtendras algo como:
+
+```powershell
+Usage: dbx-admin [OPTIONS] COMMAND [ARGS]...
+
+Herramientas de administración para Databricks.
+
+Commands:
+  secrets
+```
+
+### 3 Utilizar aplicacion con secrets
+
+```powershell
+dbx-admin secrets --help
+```
+
+obtendras algo como:
+
+```powershell
+Commands:
+  create
+  list
+  validate
+```
+
+### 4 Ejemplos
+
+#### * Listar
+
+```powershell
+dbx-admin secrets list --scope akv-secrets-scope-01
+```
+
+#### * Crear
+
+```powershell
+dbx-admin secrets create --scope mi-scope --key oracle-user --value "usuario_oracle"
+```
+
+#### * Validar
+
+```powershell
+dbx-admin secrets validate --scope akv-secrets-scope-01 --key oracle-password
+```
+
+#### * Consultar
+
+```powershell
+dbx-admin secrets get --scope akv-secrets-scope-01 --key oracle-password
+```
+
+Una mejora que haría desde el principio
+
+Hay una cosa que cambiaría respecto a la estructura inicial: aprovecharía tu archivo:
+
+clients/
+└── databricks.py
+
+para que cli.py no tenga que conocer cómo se autentica Databricks.
+
+Quedaría:
+
+cli.py
+   │
+   ▼
+SecretService
+   │
+   ▼
+DatabricksClient
+   │
+   ▼
+Databricks SDK
+
+Así posteriormente puedes hacer:
+
+dbx-admin --profile dev secrets list --scope ...
+
+o:
+
+dbx-admin --profile prod secrets list --scope ...
+
+sin modificar SecretService.
+
+Ese sería el siguiente paso que yo haría antes de agregar Jobs, Unity Catalog, Apps, etc. Así establecemos una buena arquitectura base y después los demás módulos (jobs, catalog, volumes, apps) simplemente reutilizan el mismo cliente.
