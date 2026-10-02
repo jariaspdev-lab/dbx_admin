@@ -40,7 +40,7 @@ A continuación se muestra un ejemplo completo de cómo conectar `setuptools` co
 
 #### Estrategia de Archivos
 
-```
+``` text
 mi_proyecto/
 ├── pyproject.toml
 ├── requirements.txt

@@ -1,12 +1,14 @@
 import typer
 
+
 from databricks.sdk import WorkspaceClient
 
 from dbx_admin.secrets.models import SecretCreate
 from dbx_admin.secrets.service import SecretService
 from dbx_admin.decode.service import DecodeService
 from dbx_admin.decode.models import DecodeRequest
-
+from dbx_admin.context.service import ContextService
+from dbx_admin.context.models import UserContext
 
 app = typer.Typer(
     name="dbx-admin",
@@ -24,6 +26,11 @@ decode_app = typer.Typer(
     help="Decodificación de valores.",
 )
 
+context_app = typer.Typer(
+    name="context",
+    help="Inspeccionar el contexto actual de Databricks.",
+)
+
 app.add_typer(
     secrets_app,
     name="secrets",
@@ -31,6 +38,10 @@ app.add_typer(
 app.add_typer(
     decode_app,
     name="decode",
+)
+app.add_typer(
+    context_app,
+    name="context",
 )
 
 
@@ -199,6 +210,42 @@ def decode_value(
 
     typer.echo(response.value)
 
+
+@context_app.command("show")
+def show(
+    user_id: str | None = typer.Option(
+        None,
+        "--user-id",
+        "-u",
+        help="ID del usuario a consultar. "
+             "Si no se indica, se consulta el usuario actual.",
+    ),
+):
+    """Mostrar la identidad y contexto actual."""
+
+    client = get_client()
+    service = ContextService(client)
+
+    context = service.get_user(user_id=user_id)
+    typer.echo("---------------------------------------------------\n")
+    typer.echo(f"User           : {context.username}")    
+    typer.echo(f"Name           : {context.display_name}")
+    typer.echo(f"Active         : {context.active}")
+    typer.echo(f"External ID    : {context.external_id}")
+    typer.echo(f"ID             : {context.id}")
+
+    typer.echo("\nGroups:")
+    for group in context.groups:
+        typer.echo(f"  - {group}")
+
+    typer.echo("\nRoles:")
+    for role in context.roles:
+        typer.echo(f"  - {role}")
+
+    typer.echo("\nEntitlements:")
+    for entitlement in context.entitlements:
+        typer.echo(f"  - {entitlement}")
+    typer.echo("---------------------------------------------------")
 
 if __name__ == "__main__":
     app()
