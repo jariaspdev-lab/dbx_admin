@@ -1,0 +1,91 @@
+version: "1.0"
+
+project:
+  name: pry_proyecto_ejemplo
+  owner: equipo_datos
+  description: Proyecto de procesamiento de información
+
+target:
+  catalog: cat_test
+
+infrastructure:
+  schemas:
+    - name: sq_config
+      comment: Objetos de configuración y control
+
+  volumes:
+    - name: carga
+      schema: sq_config
+      comment: Archivos de entrada
+      type: MANAGED
+
+    - name: salida
+      schema: sq_config
+      comment: Archivos de salida
+      type: MANAGED
+
+  tables:
+    - name: tabla_01
+      schema: sq_config
+      comment: Tabla principal
+
+      columns:
+        - name: id
+          type: BIGINT
+          nullable: false
+
+        - name: nombre
+          type: STRING
+          nullable: false
+
+        - name: fecha
+          type: TIMESTAMP
+          nullable: false
+
+      properties:
+        delta.enableChangeDataFeed: "true"
+
+    - name: tabla_02
+      schema: sq_config
+      comment: Tabla secundaria
+
+      columns:
+        - name: id
+          type: BIGINT
+          nullable: false
+
+        - name: descripcion
+          type: STRING
+
+    - name: tabla_03
+      schema: sq_config
+      comment: Tabla de control
+
+      columns:
+        - name: execution_id
+          type: STRING
+          nullable: false
+
+        - name: pipeline_name
+          type: STRING
+
+        - name: status
+          type: STRING
+
+        - name: start_ts
+          type: TIMESTAMP
+
+  grants:
+    - object_type: TABLE
+      object: tabla_01
+      principal: grupo_datos
+      privileges:
+        - SELECT
+        - MODIFY
+
+    - object_type: VOLUME
+      object: carga
+      principal: grupo_datos
+      privileges:
+        - READ_VOLUME
+        - WRITE_VOLUME
