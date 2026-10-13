@@ -18,7 +18,7 @@ from dbx_admin.volumes.models import VolumeCreate, VolumeType
 from dbx_admin.grants.service import GrantService
 from dbx_admin.tables.service import TableService
 from dbx_admin.manifiesto.service import ManifestService
-
+from dbx_admin.warehouses.service import WarehousesService
 
 app = typer.Typer(
     name="dbx-admin",
@@ -48,6 +48,11 @@ app_app = typer.Typer(
 volume_app = typer.Typer(
     name="volume",
     help="Administración de volúmenes de Unity Catalog.",
+)
+
+warehouses_app = typer.Typer(
+    name="warehouses",
+    help="Administración de warehouses de Unity Catalog.",
 )
 
 table_app = typer.Typer(
@@ -100,6 +105,11 @@ app.add_typer(
 app.add_typer(
     table_app,
     name="table",
+)
+
+app.add_typer(
+    warehouses_app,
+    name="warehouses",
 )
 
 app.add_typer(
@@ -773,6 +783,89 @@ def apply_manifest(
 
     if result.has_errors:
         raise typer.Exit(code=1)
+
+@warehouses_app.command("list")
+def list_warehouses():
+    """Listar todos los warehouses de Unity Catalog."""
+    client = get_client()
+    service = WarehousesService(client)
+    warehouses = service.get_list_warehouses()
+    print_table(
+        ["ID", "Nombre", "Estado", "Tamaño", "Tipo", "Serverless"],
+        [
+            (
+                w.id,
+                w.name,
+                w.state,
+                w.cluster_size,
+                w.warehouse_type,
+                w.enable_serverless_compute,
+            )
+            for w in warehouses
+        ],
+    )
+
+
+WAREHOUSE_ID_ARG = typer.Argument(..., help="ID del warehouse.")
+
+
+@warehouses_app.command("show")
+def show_warehouse(warehouse_id: str = WAREHOUSE_ID_ARG):
+    """Mostrar información de un warehouse."""
+
+    service = WarehousesService(get_client())
+    w = service.get(warehouse_id)
+
+    print_sections({
+        "Información general": [
+            ("ID", w.id),
+            ("Nombre", w.name),
+            ("Estado", w.state),
+            ("Tipo", w.warehouse_type),
+            ("Serverless", w.enable_serverless_compute),
+            ("Creador", w.creator_name),
+        ],
+        "Capacidad": [
+            ("Tamaño de clúster", w.cluster_size),
+            ("Mín. clústeres", w.min_num_clusters),
+            ("Máx. clústeres", w.max_num_clusters),
+            ("Clústeres activos", w.num_clusters),
+            ("Auto-stop (min)", w.auto_stop_mins),
+        ],
+        "Conexión": [
+            ("JDBC URL", w.jdbc_url),
+        ],
+    })
+
+
+@warehouses_app.command("start")
+def start_warehouse(
+    warehouse_id: str = WAREHOUSE_ID_ARG,
+    wait: bool = typer.Option(
+        False,
+        "--wait",
+        help="Esperar hasta que el warehouse esté en ejecución.",
+    ),
+):
+    """Iniciar un warehouse."""
+
+    w = WarehousesService(get_client()).start(warehouse_id, wait=wait)
+    typer.echo(f"Warehouse {w.id} ({w.name}): {w.state}")
+
+
+@warehouses_app.command("stop")
+def stop_warehouse(
+    warehouse_id: str = WAREHOUSE_ID_ARG,
+    wait: bool = typer.Option(
+        False,
+        "--wait",
+        help="Esperar hasta que el warehouse esté detenido.",
+    ),
+):
+    """Detener un warehouse."""
+
+    w = WarehousesService(get_client()).stop(warehouse_id, wait=wait)
+    typer.echo(f"Warehouse {w.id} ({w.name}): {w.state}")
 
 
 if __name__ == "__main__":
