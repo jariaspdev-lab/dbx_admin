@@ -1,15 +1,23 @@
-from xmlrpc import client
-
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import catalog
+from dbx_admin.utils.sql_script import run_sql_script
 from .models import VolumeCreate, VolumeInfo
 
 
 class VolumeService:
     """Servicio para administrar volúmenes de Unity Catalog."""
 
-    def __init__(self, client: WorkspaceClient):
+    def __init__(self, client: WorkspaceClient, warehouse_id: str | None = None):
         self.client = client
+        self.warehouse_id = warehouse_id
+
+    def create_from_sql_file(self, url: str, catalog: str | None = None) -> list[str]:
+        """Ejecutar las sentencias de un archivo SQL en un SQL Warehouse.
+
+        Retorna las sentencias ejecutadas. Requiere `warehouse_id`.
+        """
+
+        return run_sql_script(self.client, self.warehouse_id, url, catalog)
 
     def create(self, volume: VolumeCreate) -> VolumeInfo:
         """Crear un volumen de Unity Catalog."""

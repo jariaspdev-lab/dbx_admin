@@ -1,0 +1,40 @@
+version: "1.0"
+
+project:
+  name: pry_proyecto_ejemplo
+  owner: equipo_datos
+  description: Proyecto de procesamiento de información
+
+target:
+  catalog: cat_test
+
+infrastructure:
+  schemas:
+    - url: /Volumes/cat_dev/sq_config/vol_conf_aduanero/crear_esquema_temporal.sql
+
+  volumes:
+    - url: /Volumes/cat_dev/sq_config/vol_conf_aduanero/crear_volumen_01.sql
+
+    - url: /Volumes/cat_dev/sq_config/vol_conf_aduanero/crear_volumen_02.sql
+
+  tables:
+    - url: /Volumes/cat_dev/sq_config/vol_conf_aduanero/crear_tabla_01.sql
+
+    - url: /Volumes/cat_dev/sq_config/vol_conf_aduanero/crear_tabla_02.sql
+
+    - url: /Volumes/cat_dev/sq_config/vol_conf_aduanero/crear_tabla_03.sql
+
+  grants:
+    - object_type: TABLE
+      object: tabla_01
+      principal: grupo_datos
+      privileges:
+        - SELECT
+        - MODIFY
+
+    - object_type: VOLUME
+      object: carga
+      principal: grupo_datos
+      privileges:
+        - READ_VOLUME
+        - WRITE_VOLUME

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import base64
+
 from databricks.sdk import WorkspaceClient
 
 from .models import (
@@ -67,4 +71,15 @@ class SecretService:
             key=key,
         )
 
-        return response.value
+        # La API devuelve el valor codificado en base64.
+        return base64.b64decode(response.value or "").decode("utf-8")
+
+    def delete(self, scope: str, key: str) -> None:
+        """Eliminar un secreto."""
+
+        self.client.secrets.delete_secret(scope=scope, key=key)
+
+    def list_scopes(self) -> list[str]:
+        """Listar los Secret Scopes disponibles."""
+
+        return [s.name for s in self.client.secrets.list_scopes()]

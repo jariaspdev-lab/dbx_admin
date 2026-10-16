@@ -4,6 +4,7 @@ import re
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import catalog
 from databricks.sdk.service.sql import StatementState
+from dbx_admin.utils.sql_script import run_sql_script
 from .models import TableColumn, TableCreate, TableInfo
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
@@ -146,6 +147,14 @@ class TableService:
             raise RuntimeError(
                 f"No fue posible crear la tabla {full_name} con SQL: {exc}"
             ) from exc
+
+    def create_from_sql_file(self, url: str, catalog: str | None = None) -> list[str]:
+        """Ejecutar las sentencias de un archivo SQL en un SQL Warehouse.
+
+        Retorna las sentencias ejecutadas. Requiere `warehouse_id`.
+        """
+
+        return run_sql_script(self.client, self.warehouse_id, url, catalog)
 
     @staticmethod
     def _to_column_info(column: TableColumn, position: int) -> catalog.ColumnInfo:

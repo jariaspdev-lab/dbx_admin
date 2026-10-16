@@ -17,7 +17,10 @@ from dbx_admin.volumes.service import VolumeService
 from dbx_admin.volumes.models import VolumeCreate, VolumeType
 from dbx_admin.grants.service import GrantService
 from dbx_admin.tables.service import TableService
+from dbx_admin.schemas.service import SchemaService
+from dbx_admin.schemas.models import SchemaCreate
 from dbx_admin.manifiesto.service import ManifestService
+from dbx_admin.manifiesto.url_service import ManifestUrlService
 from dbx_admin.warehouses.service import WarehousesService
 
 app = typer.Typer(
@@ -60,6 +63,11 @@ table_app = typer.Typer(
     help="Administración de tablas de Unity Catalog.",
 )
 
+schema_app = typer.Typer(
+    name="schema",
+    help="Administración de schemas de Unity Catalog.",
+)
+
 grants_app = typer.Typer(
     name="grants",
     help="Administrar privilegios de Unity Catalog."
@@ -73,6 +81,16 @@ manifest_app = typer.Typer(
 app.add_typer(
     manifest_app,
     name="manifest",
+)
+
+manifest_url_app = typer.Typer(
+    name="manifest-url",
+    help="Aprovisionar recursos desde un manifiesto YAML con scripts SQL (url).",
+)
+
+app.add_typer(
+    manifest_url_app,
+    name="manifest-url",
 )
 
 grants_schema_app = typer.Typer(
@@ -105,6 +123,11 @@ app.add_typer(
 app.add_typer(
     table_app,
     name="table",
+)
+
+app.add_typer(
+    schema_app,
+    name="schema",
 )
 
 app.add_typer(
@@ -560,6 +583,36 @@ def create_volume(
         f"Volume creado: {volume.full_name}"
     )
 
+
+@volume_app.command("create-sql")
+def create_volume_sql(
+    url_script_sql: str = typer.Option(
+        ...,
+        "--url-script-sql",
+        "-u",
+        help="Ruta o URL (http/https) del archivo .sql con la creación del volumen.",
+    ),
+    warehouse_id: str | None = typer.Option(
+        None,
+        "--warehouse-id",
+        "-w",
+        envvar="DATABRICKS_WAREHOUSE_ID",
+        help="SQL Warehouse donde se ejecuta el script.",
+    ),
+):
+    """Crear volúmenes ejecutando un script SQL."""
+
+    service = VolumeService(get_client(), warehouse_id=warehouse_id)
+
+    try:
+        statements = service.create_from_sql_file(url_script_sql)
+    except RuntimeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"Script ejecutado: {len(statements)} sentencia(s).")
+
+
 @grants_schema_app.command("list")
 def list_schema_grants(
     catalog: str = typer.Option(
@@ -721,6 +774,100 @@ def create_table(
     typer.echo(f"Tabla creada: {table.full_name}")
 
 
+@schema_app.command("create")
+def create_schema(
+    catalog: str = typer.Option(
+        ...,
+        "--catalog",
+        "-c",
+        help="Nombre del catalog.",
+    ),
+    name: str = typer.Option(
+        ...,
+        "--name",
+        "-n",
+        help="Nombre del schema.",
+    ),
+    comment: str | None = typer.Option(
+        None,
+        "--comment",
+        "-m",
+        help="Comentario del schema.",
+    ),
+):
+    """Crear un nuevo schema en Unity Catalog."""
+
+    service = SchemaService(get_client())
+
+    try:
+        schema = service.create(
+            SchemaCreate(catalog_name=catalog, name=name, comment=comment)
+        )
+    except RuntimeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"Schema creado: {schema.full_name}")
+
+
+@schema_app.command("create-sql")
+def create_schema_sql(
+    url_script_sql: str = typer.Option(
+        ...,
+        "--url-script-sql",
+        "-u",
+        help="Ruta o URL (http/https) del archivo .sql con la creación del schema.",
+    ),
+    warehouse_id: str | None = typer.Option(
+        None,
+        "--warehouse-id",
+        "-w",
+        envvar="DATABRICKS_WAREHOUSE_ID",
+        help="SQL Warehouse donde se ejecuta el script.",
+    ),
+):
+    """Crear schemas ejecutando un script SQL."""
+
+    service = SchemaService(get_client(), warehouse_id=warehouse_id)
+
+    try:
+        statements = service.create_from_sql_file(url_script_sql)
+    except RuntimeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"Script ejecutado: {len(statements)} sentencia(s).")
+
+
+@table_app.command("create-sql")
+def create_table_sql(
+    url_script_sql: str = typer.Option(
+        ...,
+        "--url-script-sql",
+        "-u",
+        help="Ruta o URL (http/https) del archivo .sql con la creación de la tabla.",
+    ),
+    warehouse_id: str | None = typer.Option(
+        None,
+        "--warehouse-id",
+        "-w",
+        envvar="DATABRICKS_WAREHOUSE_ID",
+        help="SQL Warehouse donde se ejecuta el script.",
+    ),
+):
+    """Crear tablas ejecutando un script SQL."""
+
+    service = TableService(get_client(), warehouse_id=warehouse_id)
+
+    try:
+        statements = service.create_from_sql_file(url_script_sql)
+    except RuntimeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"Script ejecutado: {len(statements)} sentencia(s).")
+
+
 @manifest_app.command("apply")
 def apply_manifest(
     file: Path = typer.Option(
@@ -784,6 +931,70 @@ def apply_manifest(
     if result.has_errors:
         raise typer.Exit(code=1)
 
+@manifest_url_app.command("apply")
+def apply_manifest_url(
+    file: Path = typer.Option(
+        Path("resources/manifest-url.yaml"),
+        "--file",
+        "-f",
+        help="Ruta del manifiesto YAML con scripts SQL.",
+    ),
+    var: list[str] = typer.Option(
+        [],
+        "--var",
+        help="Variable del manifiesto en formato nombre=valor. Repetible.",
+    ),
+    warehouse_id: str | None = typer.Option(
+        None,
+        "--warehouse-id",
+        "-w",
+        envvar="DATABRICKS_WAREHOUSE_ID",
+        help="SQL Warehouse donde se ejecutan los scripts.",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Mostrar lo que se ejecutaría sin ejecutar cambios.",
+    ),
+):
+    """Ejecutar los scripts SQL y grants definidos en un manifiesto."""
+
+    variables = {}
+    for item in var:
+        key, sep, value = item.partition("=")
+        if not sep or not key:
+            raise typer.BadParameter(
+                f"Formato inválido '{item}'. Use nombre=valor.",
+                param_hint="--var",
+            )
+        variables[key] = value
+
+    try:
+        service = ManifestUrlService(get_client(), warehouse_id=warehouse_id)
+        manifest = service.load(file, variables)
+        result = service.apply(manifest, dry_run=dry_run)
+    except (FileNotFoundError, ValueError) as exc:
+        typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+
+    typer.secho(
+        f"\nManifiesto: {manifest.project.name}"
+        f"{' (dry-run)' if dry_run else ''}",
+        bold=True,
+        fg=typer.colors.CYAN,
+    )
+    print_table(
+        ["Tipo", "Recurso", "Estado", "Detalle"],
+        [
+            (r.kind, r.full_name, r.status, r.detail)
+            for r in result.resources
+        ],
+    )
+
+    if result.has_errors:
+        raise typer.Exit(code=1)
+
+
 @warehouses_app.command("list")
 def list_warehouses():
     """Listar todos los warehouses de Unity Catalog."""
@@ -791,81 +1002,9 @@ def list_warehouses():
     service = WarehousesService(client)
     warehouses = service.get_list_warehouses()
     print_table(
-        ["ID", "Nombre", "Estado", "Tamaño", "Tipo", "Serverless"],
-        [
-            (
-                w.id,
-                w.name,
-                w.state,
-                w.cluster_size,
-                w.warehouse_type,
-                w.enable_serverless_compute,
-            )
-            for w in warehouses
-        ],
+        ["ID", "Nombre", "Estado"],
+        [(w.id, w.name, w.state) for w in warehouses],
     )
-
-
-WAREHOUSE_ID_ARG = typer.Argument(..., help="ID del warehouse.")
-
-
-@warehouses_app.command("show")
-def show_warehouse(warehouse_id: str = WAREHOUSE_ID_ARG):
-    """Mostrar información de un warehouse."""
-
-    service = WarehousesService(get_client())
-    w = service.get(warehouse_id)
-
-    print_sections({
-        "Información general": [
-            ("ID", w.id),
-            ("Nombre", w.name),
-            ("Estado", w.state),
-            ("Tipo", w.warehouse_type),
-            ("Serverless", w.enable_serverless_compute),
-            ("Creador", w.creator_name),
-        ],
-        "Capacidad": [
-            ("Tamaño de clúster", w.cluster_size),
-            ("Mín. clústeres", w.min_num_clusters),
-            ("Máx. clústeres", w.max_num_clusters),
-            ("Clústeres activos", w.num_clusters),
-            ("Auto-stop (min)", w.auto_stop_mins),
-        ],
-        "Conexión": [
-            ("JDBC URL", w.jdbc_url),
-        ],
-    })
-
-
-@warehouses_app.command("start")
-def start_warehouse(
-    warehouse_id: str = WAREHOUSE_ID_ARG,
-    wait: bool = typer.Option(
-        False,
-        "--wait",
-        help="Esperar hasta que el warehouse esté en ejecución.",
-    ),
-):
-    """Iniciar un warehouse."""
-
-    w = WarehousesService(get_client()).start(warehouse_id, wait=wait)
-    typer.echo(f"Warehouse {w.id} ({w.name}): {w.state}")
-
-
-@warehouses_app.command("stop")
-def stop_warehouse(
-    warehouse_id: str = WAREHOUSE_ID_ARG,
-    wait: bool = typer.Option(
-        False,
-        "--wait",
-        help="Esperar hasta que el warehouse esté detenido.",
-    ),
-):
-    """Detener un warehouse."""
-
-    w = WarehousesService(get_client()).stop(warehouse_id, wait=wait)
-    typer.echo(f"Warehouse {w.id} ({w.name}): {w.state}")
 
 
 if __name__ == "__main__":
